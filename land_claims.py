@@ -1,3 +1,4 @@
+import json
 import openpyxl
 import sqlite3
 import sys
@@ -10,7 +11,8 @@ conn.execute('DROP TABLE IF EXISTS states')
 conn.execute('''
 CREATE TABLE states (
     id INTEGER PRIMARY KEY,
-    state TEXT NOT NULL UNIQUE
+    state TEXT NOT NULL UNIQUE,
+    coordinates TEXT
 );
 ''')
 conn.execute('DROP TABLE IF EXISTS land_offices')
@@ -56,6 +58,16 @@ CREATE TABLE IF NOT EXISTS commutations (
 );
 ''')
 
+# Process the state polygon coordinates.
+with open('us_states.json', 'r') as us_states:
+    data = json.load(us_states)
+state_coordinates_map = {}
+for feature in data['features']:
+    state = feature['properties']['name']
+    coordinates = feature['geometry']['coordinates']
+    state_coordinates_map[state] = json.dumps(coordinates)
+
+# Load the workbook.
 wb = openpyxl.load_workbook(sys.argv[1])
 valid_sheets = [str(year) for year in range(1863, 1897)]
 
@@ -68,8 +80,8 @@ for row in wb['good keys'].iter_rows(min_row=3, max_row=211, max_col=2):
     state = row[1].value
     land_office = row[0].value
     land_office_state_map[land_office] = state
-    state_values.add((state,))
-conn.executemany('INSERT INTO states (state) VALUES (?)', state_values)
+    state_values.add((state, state_coordinates_map[state]))
+conn.executemany('INSERT INTO states (state, coordinates) VALUES (?, ?)', state_values)
 states = {row['state']: row['id'] for row in conn.execute('SELECT * FROM states').fetchall()}
 for land_office, state in land_office_state_map.items():
     land_office_values.add((states[state], land_office))
