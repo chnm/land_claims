@@ -5,6 +5,13 @@ the Homestead Act with further quantitative data and qualitative narratives.
 
 ## Migration
 
+### Requirements
+
+ - Python 3+ (with the `openpyxl` module installed)
+ - SQLite 3+
+
+### Migrate from XLSX to SQLite
+
 Currently the migration script assumes the existence of the "Land claims by
 office 1863-96.xlsx" workbook. It also assumes that the list of land offices and
 states in the "good keys" worksheet is comprehensive. There is also an
@@ -12,13 +19,6 @@ expectation that the structure of the workbook will not change beyond the
 addition of as-of-yet untranscribed claims, patents, commutations, and their
 acreages. Any further changes to the workbook may require changes to the
 migration script.
-
-### Requirements
-
- - Python 3+ (with the `openpyxl` module installed)
- - SQLite 3+
-
-### Migrate from XLSX to SQLite
 
 Run the migration script, where `<my_workbook_file>` is the path to the XLSX
 file:
@@ -31,11 +31,14 @@ it using:
 $ sqlite3 land_claims.db
 ```
 
+## Database
+
 ### Example usage
 
-Now we can start asking questions about the data, reflecting them in SQL
-statements, generating geographic data structures (e.g. GeoJSON), and applying
-them to an interactive map. Some very simple examples:
+With the `land_claims.db` database in place, we can start asking questions about
+the data, reflecting them in SQL statements, generating geographic data
+structures (e.g. GeoJSON), and applying them to an interactive map. Some very
+simple examples:
 
 Select all claims with an acreage greater than 500,000:
 ```sql
