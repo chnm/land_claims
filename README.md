@@ -3,12 +3,12 @@
 Building dynamic maps to combine the spatial land claims statistics related to
 the Homestead Act with further quantitative data and qualitative narratives.
 
-## Migration
-
-### Requirements
+## Requirements
 
  - Python 3+ (with the `openpyxl` module installed)
  - SQLite 3+
+
+## Migration
 
 ### Migrate from XLSX to SQLite
 
@@ -23,22 +23,22 @@ migration script.
 Run the migration script, where `<my_workbook_file>` is the path to the XLSX
 file:
 ```
-$ python3 migrate_land_claims.py <my_workbook_file>
+$ python3 migrate.py <my_workbook_file>
 ```
-This will create (or overwrite) a `land_claims.db` database file. You can open
+This will create (or overwrite) a `mapping_the_homestead_act.db` database file. You can open
 it using:
 ```
-$ sqlite3 land_claims.db
+$ sqlite3 mapping_the_homestead_act.db
 ```
 
 ## Database
 
 ### Example usage
 
-With the `land_claims.db` database in place, we can start asking questions about
-the data, reflecting them in SQL statements, generating geographic data
-structures (e.g. GeoJSON), and applying them to an interactive map. Some very
-simple examples:
+With the `mapping_the_homestead_act.db` database in place, we can start asking
+questions about the data, reflecting them in SQL statements, generating
+geographic data structures (e.g. GeoJSON), and applying them to an interactive
+map. Some very simple examples:
 
 Select all claims with an acreage greater than 500,000:
 ```sql
@@ -59,43 +59,14 @@ GROUP BY land_offices.id
 ORDER BY states.state, land_offices.land_office, claims.year;
 ```
 
-### Schema
+## geoJSON Generation
 
-```sql
-CREATE TABLE states (
-    id INTEGER PRIMARY KEY,
-    state TEXT NOT NULL UNIQUE,
-    coordinates TEXT
-);
-CREATE TABLE land_offices (
-    id INTEGER PRIMARY KEY,
-    state_id INTEGER,
-    land_office TEXT NOT NULL UNIQUE,
-    FOREIGN KEY (state_id) REFERENCES state (id) ON DELETE CASCADE
-);
-CREATE TABLE claims (
-    id INTEGER PRIMARY KEY,
-    land_office_id INTEGER,
-    year INTEGER NOT NULL,
-    claims INTEGER NULL,
-    acres REAL NULL,
-    FOREIGN KEY (land_office_id) REFERENCES land_offices (id) ON DELETE CASCADE
-);
-CREATE TABLE patents (
-    id INTEGER PRIMARY KEY,
-    land_office_id INTEGER,
-    year INTEGER NOT NULL,
-    patents INTEGER NULL,
-    acres REAL NULL,
-    FOREIGN KEY (land_office_id) REFERENCES land_offices (id) ON DELETE CASCADE
-);
-CREATE TABLE commutations (
-    id INTEGER PRIMARY KEY,
-    land_office_id INTEGER,
-    year INTEGER NOT NULL,
-    commutations INTEGER NULL,
-    acres REAL NULL,
-    FOREIGN KEY (land_office_id) REFERENCES land_offices (id) ON DELETE CASCADE
-);
+In order to create a dynamic map you'll need to generate a geoJSON feature
+collection for every year.
+
+```
+$ python3 generate_state_claims.py
 ```
 
+After this you can copy the `/html` directory to your web server and view a
+simple dynamic map.

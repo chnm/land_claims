@@ -3,7 +3,7 @@ import openpyxl
 import sqlite3
 import sys
 
-conn = sqlite3.connect('land_claims.db')
+conn = sqlite3.connect('mapping_the_homestead_act.db')
 conn.row_factory = sqlite3.Row
 
 # Create the schema.
