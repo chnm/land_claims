@@ -51,5 +51,5 @@ def getFeatureCollection(year):
 featureCollections = {}
 for year in range(1863, 1897):
     featureCollections[year] = getFeatureCollection(year)
-    with open('html/claims.js', 'w') as outfile:
-        outfile.write('var featureCollections = {}'.format(json.dumps(featureCollections)))
+with open('html/claims.js', 'w') as outfile:
+    outfile.write('var featureCollections = {}'.format(json.dumps(featureCollections)))
