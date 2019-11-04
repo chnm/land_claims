@@ -12,11 +12,21 @@
         src="https://unpkg.com/leaflet@1.5.1/dist/leaflet.js"
         integrity="sha512-GffPMF3RvMeYyc1LWMHtK8EbPv0iNZ8/oTtHPx9/cc2ILxQ+u905qIwdpULaqDkyBKgOaB57QTMg7ztg8Jm2Og=="
         crossorigin=""></script>
-    <script src="claims.js"></script>
+    <script src="feature-collections.js"></script>
 </head>
 <body>
-    <h1>Claims for <span id="current-year"></span></h1>
-    <input style="width: 500px;" id="year-select" type="range" min="1863" max="1896" value="1863">
+    <h1>Mapping the Homestead Act</h1>
+    <p>
+        Map total
+        <select id="type-select">
+            <option value="claim">claims</option>
+            <option value="patent">patents</option>
+            <option value="commutation">commutations</option>
+        </select>
+        for
+        <span id="current-year"></span>
+        <input style="width: 500px;" id="year-select" type="range" min="1863" max="1896" value="1863">
+    </p>
     <div id="mapid" style="height: 800px;"></div>
 </body>
 <script>
@@ -32,23 +42,23 @@ function getColor(d) {
 }
 function style(feature) {
     return {
-        fillColor: getColor(feature.properties.total_claims),
+        fillColor: getColor(feature.properties.total_number),
         weight: 2,
         opacity: 1,
         color: 'white',
         fillOpacity: 0.7
     };
 }
-function getFeaturedCollection(year) {
-    return L.geoJson(featureCollections[year], {
+function getFeaturedCollection(type, year) {
+    return L.geoJson(featureCollections[type][year], {
         style: style,
         onEachFeature: function(feature, layer) {
-            layer.bindPopup('<table><tr><th>State</th><td>' + feature.properties.state + '</td></tr><tr><th>Claims</th><td>' + feature.properties.total_claims + '</td></tr><tr><th>Acres</th><td>' + feature.properties.total_acres + '</td></tr></table>');
+            layer.bindPopup('<table><tr><th>State</th><td>' + feature.properties.state + '</td></tr><tr><th>Total number</th><td>' + feature.properties.total_number.toLocaleString() + '</td></tr><tr><th>Total acres</th><td>' + feature.properties.total_acres.toLocaleString() + '</td></tr></table>');
         }
     })
 }
 
-var map = L.map('mapid').setView([37.8, -96], 4);
+var map = L.map('mapid').setView([37.8, -96], 5);
 var accessToken = 'pk.eyJ1Ijoiamltc2FmbGV5IiwiYSI6ImNrMjI3dWluMzFvODUzZ3A0d2ZranZ3Y3gifQ.tT-154d2ba__LzjJNLE1cA';
 L.tileLayer(
     'https://api.tiles.mapbox.com/v4/{id}/{z}/{x}/{y}.png?access_token=' + accessToken,
@@ -58,17 +68,23 @@ L.tileLayer(
     }
 ).addTo(map);
 
+var typeSelect = document.getElementById('type-select');
 var yearSelect = document.getElementById('year-select');
 var currentYear = document.getElementById('current-year');
 
-var featuredCollection = getFeaturedCollection('1863');
+var featuredCollection = getFeaturedCollection('claim', '1863');
 map.addLayer(featuredCollection);
 currentYear.innerHTML = '1863';
 
-yearSelect.focus()
-yearSelect.addEventListener('change', (event) => {
+typeSelect.addEventListener('change', (event) => {
     map.removeLayer(featuredCollection);
-    featuredCollection = getFeaturedCollection(event.target.value);
+    featuredCollection = getFeaturedCollection(event.target.value, yearSelect.value);
+    map.addLayer(featuredCollection);
+});
+
+yearSelect.addEventListener('input', (event) => {
+    map.removeLayer(featuredCollection);
+    featuredCollection = getFeaturedCollection(typeSelect.value, event.target.value);
     map.addLayer(featuredCollection);
     currentYear.innerHTML = event.target.value;
 });

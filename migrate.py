@@ -24,35 +24,14 @@ CREATE TABLE land_offices (
     FOREIGN KEY (state_id) REFERENCES state (id) ON DELETE CASCADE
 );
 ''')
-conn.execute('DROP TABLE IF EXISTS claims')
+conn.execute('DROP TABLE IF EXISTS stats')
 conn.execute('''
-CREATE TABLE IF NOT EXISTS claims (
+CREATE TABLE IF NOT EXISTS stats (
     id INTEGER PRIMARY KEY,
     land_office_id INTEGER,
     year INTEGER NOT NULL,
-    claims INTEGER NULL,
-    acres REAL NULL,
-    FOREIGN KEY (land_office_id) REFERENCES land_offices (id) ON DELETE CASCADE
-);
-''')
-conn.execute('DROP TABLE IF EXISTS patents')
-conn.execute('''
-CREATE TABLE IF NOT EXISTS patents (
-    id INTEGER PRIMARY KEY,
-    land_office_id INTEGER,
-    year INTEGER NOT NULL,
-    patents INTEGER NULL,
-    acres REAL NULL,
-    FOREIGN KEY (land_office_id) REFERENCES land_offices (id) ON DELETE CASCADE
-);
-''')
-conn.execute('DROP TABLE IF EXISTS commutations')
-conn.execute('''
-CREATE TABLE IF NOT EXISTS commutations (
-    id INTEGER PRIMARY KEY,
-    land_office_id INTEGER,
-    year INTEGER NOT NULL,
-    commutations INTEGER NULL,
+    type TEXT NOT NULL,
+    number INTEGER NULL,
     acres REAL NULL,
     FOREIGN KEY (land_office_id) REFERENCES land_offices (id) ON DELETE CASCADE
 );
@@ -99,12 +78,16 @@ for ws in wb:
                 if row[0].value in land_offices:
                     land_office_id = land_offices[row[0].value]
                     year = int(ws.title)
-                    claim_values.add((land_office_id, year, row[1].value, row[2].value))
-                    patent_values.add((land_office_id, year, row[3].value, row[4].value))
-                    commutation_values.add((land_office_id, year, row[5].value, row[6].value))
-conn.executemany('INSERT INTO claims (land_office_id, year, claims, acres) VALUES (?, ?, ?, ?)', claim_values)
-conn.executemany('INSERT INTO patents (land_office_id, year, patents, acres) VALUES (?, ?, ?, ?)', patent_values)
-conn.executemany('INSERT INTO commutations (land_office_id, year, commutations, acres) VALUES (?, ?, ?, ?)', commutation_values)
+                    # Note that the numbers must be integers (i.e. not None or float)
+                    if isinstance(row[1].value, int):
+                        claim_values.add((land_office_id, year, 'claim', row[1].value, row[2].value))
+                    if isinstance(row[3].value, int):
+                        patent_values.add((land_office_id, year, 'patent', row[3].value, row[4].value))
+                    if isinstance(row[5].value, int):
+                        commutation_values.add((land_office_id, year, 'commutation', row[5].value, row[6].value))
+conn.executemany('INSERT INTO stats (land_office_id, year, type, number, acres) VALUES (?, ?, ?, ?, ?)', claim_values)
+conn.executemany('INSERT INTO stats (land_office_id, year, type, number, acres) VALUES (?, ?, ?, ?, ?)', patent_values)
+conn.executemany('INSERT INTO stats (land_office_id, year, type, number, acres) VALUES (?, ?, ?, ?, ?)', commutation_values)
 
 conn.commit()
 conn.close()

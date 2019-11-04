@@ -42,30 +42,32 @@ map. Some very simple examples:
 
 Select all claims with an acreage greater than 500,000:
 ```sql
-SELECT states.state, land_offices.land_office, claims.year, claims.claims, claims.acres
-FROM claims
-INNER JOIN land_offices ON claims.land_office_id = land_offices.id
+SELECT states.state, land_offices.land_office, stats.year, stats.number, stats.acres
+FROM stats
+INNER JOIN land_offices ON stats.land_office_id = land_offices.id
 INNER JOIN states ON land_offices.state_id = states.id
-WHERE acres > 500000
-ORDER BY states.state, land_offices.land_office, claims.year;
+WHERE stats.type = "claim"
+AND acres > 500000
+ORDER BY states.state, land_offices.land_office, stats.year;
 ```
-Select the total number of claims for each land office:
+Select the total number of patents for each land office:
 ```sql
-SELECT states.state, land_offices.land_office, SUM(claims.claims)
-FROM claims
-INNER JOIN land_offices ON claims.land_office_id = land_offices.id
+SELECT states.state, land_offices.land_office, SUM(stats.number)
+FROM stats
+INNER JOIN land_offices ON stats.land_office_id = land_offices.id
 INNER JOIN states ON land_offices.state_id = states.id
+WHERE stats.type = "patent"
 GROUP BY land_offices.id
-ORDER BY states.state, land_offices.land_office, claims.year;
+ORDER BY states.state, land_offices.land_office, stats.year;
 ```
 
-## geoJSON Generation
+## Dynamic map
 
 In order to create a dynamic map you'll need to generate a geoJSON feature
-collection for every year.
+collection for every type for every year.
 
 ```
-$ python3 generate_state_claims.py
+$ python3 generate_feature_collections.py
 ```
 
 After this you can copy the `/html` directory to your web server and view a
