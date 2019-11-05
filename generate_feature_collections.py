@@ -22,9 +22,9 @@ def getFeatureCollection(type, year):
     for row in c.execute(sql, (type, year)):
         if row['state'] not in states:
             states[row['state']] = {'coordinates': json.loads(row['coordinates'])}
-        if row['number'] not in states[row['state']]:
+        if 'total_number' not in states[row['state']]:
             states[row['state']]['total_number'] = 0
-        if row['acres'] not in states[row['state']]:
+        if 'total_acres' not in states[row['state']]:
             states[row['state']]['total_acres'] = 0
         if isinstance(row['number'], int):
             states[row['state']]['total_number'] = states[row['state']]['total_number'] + row['number']
