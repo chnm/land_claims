@@ -3,6 +3,9 @@ import openpyxl
 import sqlite3
 import sys
 
+YEAR_FROM = 1863
+YEAR_TO = 1912
+
 conn = sqlite3.connect('mapping_the_homestead_act.db')
 conn.row_factory = sqlite3.Row
 
@@ -48,7 +51,7 @@ for feature in data['features']:
 
 # Load the workbook.
 wb = openpyxl.load_workbook(sys.argv[1])
-valid_sheets = [str(year) for year in range(1863, 1897)]
+valid_sheets = [str(year) for year in range(YEAR_FROM, YEAR_TO)]
 
 # Process the states and land offices. Here we assume that the list of land
 # offices and states on the "good keys" sheet is comprehensive.

@@ -1,6 +1,9 @@
 import json
 import sqlite3
 
+YEAR_FROM = 1863
+YEAR_TO = 1912
+
 conn = sqlite3.connect('mapping_the_homestead_act.db')
 conn.row_factory = sqlite3.Row
 c = conn.cursor()
@@ -54,7 +57,7 @@ featureCollections = {}
 for type in ['claim', 'patent', 'commutation']:
     if type not in featureCollections:
         featureCollections[type] = {}
-    for year in range(1863, 1897):
+    for year in range(YEAR_FROM, YEAR_TO):
         featureCollections[type][year] = getFeatureCollection(type, year)
 with open('html/feature-collections.js', 'w') as outfile:
     outfile.write('var featureCollections = {}'.format(json.dumps(featureCollections)))
