@@ -54,7 +54,7 @@ def getFeatureCollection(type, year):
     return featureCollection
 
 featureCollections = {}
-for type in ['claim', 'patent', 'commutation']:
+for type in ['claim', 'patent', 'commutation_sec2301']:
     if type not in featureCollections:
         featureCollections[type] = {}
     for year in range(YEAR_FROM, YEAR_TO):
