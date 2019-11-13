@@ -59,7 +59,14 @@ function getFeaturedCollection(type, year) {
     return L.geoJson(featureCollections[type][year], {
         style: style,
         onEachFeature: function(feature, layer) {
-            layer.bindPopup('<table><tr><th>State</th><td>' + feature.properties.state + '</td></tr><tr><th>Total number</th><td>' + feature.properties.total_number.toLocaleString() + '</td></tr><tr><th>Total acres</th><td>' + feature.properties.total_acres.toLocaleString() + '</td></tr></table>');
+            var stateData = '<table><tr><th>State</th><td style="text-align: right;">' + feature.properties.state + '</td></tr><tr><th>Total number</th><td style="text-align: right;">' + feature.properties.total_number.toLocaleString() + '</td></tr><tr><th>Total acres</th><td style="text-align: right;">' + feature.properties.total_acres.toLocaleString() + '</td></tr></table>';
+            var landOfficeData = '<table><tr><th>Land office</th><th>Total number</th><th>Total acres</th></tr>'; 
+            for (const [key, value] of Object.entries(feature.properties.land_offices).sort()) {
+                landOfficeData += '<tr><td>' + key + '</td><td style="text-align: right;">' +  value['total_number'].toLocaleString() + '</td><td style="text-align: right;">' +  value['total_acres'].toLocaleString() + '</td></tr>';
+            }
+            landOfficeData += '</table>';
+            layer.bindPopup(stateData + landOfficeData);
+            //~ console.log(feature.properties.land_offices);
         }
     })
 }
