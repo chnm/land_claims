@@ -27,9 +27,9 @@ def getFeatureCollection(type, year):
         if 'total_acres' not in states[row['state']]:
             states[row['state']]['total_acres'] = 0
         if isinstance(row['number'], int):
-            states[row['state']]['total_number'] = states[row['state']]['total_number'] + row['number']
+            states[row['state']]['total_number'] += row['number']
         if isinstance(row['acres'], (int, float)):
-            states[row['state']]['total_acres'] = states[row['state']]['total_acres'] + row['acres']
+            states[row['state']]['total_acres'] += row['acres']
 
     features = []
     for state, data in states.items():
