@@ -28,7 +28,7 @@ def getFeatureCollection(type, year):
             states[row['state']]['total_acres'] = 0
         if isinstance(row['number'], int):
             states[row['state']]['total_number'] = states[row['state']]['total_number'] + row['number']
-        if isinstance(row['acres'], float):
+        if isinstance(row['acres'], (int, float)):
             states[row['state']]['total_acres'] = states[row['state']]['total_acres'] + row['acres']
 
     features = []
@@ -54,7 +54,10 @@ def getFeatureCollection(type, year):
     return featureCollection
 
 featureCollections = {}
-for type in ['claim', 'patent', 'commutation_sec2301']:
+for type in [
+    'claim', 'patent', 'commutation_sec2301', 'commutation_june151880',
+    'claim_indianland', 'patent_indianland', 'commutation_indianland'
+]:
     if type not in featureCollections:
         featureCollections[type] = {}
     for year in range(YEAR_FROM, YEAR_TO):
