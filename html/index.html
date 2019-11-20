@@ -12,7 +12,8 @@
         src="https://unpkg.com/leaflet@1.5.1/dist/leaflet.js"
         integrity="sha512-GffPMF3RvMeYyc1LWMHtK8EbPv0iNZ8/oTtHPx9/cc2ILxQ+u905qIwdpULaqDkyBKgOaB57QTMg7ztg8Jm2Og=="
         crossorigin=""></script>
-    <script src="feature-collections.js"></script>
+    <script src="feature-collections-states.js"></script>
+    <script src="feature-collections-land-offices.js"></script>
 </head>
 <body>
     <h1>Mapping the Homestead Act</h1>
@@ -28,37 +29,72 @@
             <option value="commutation_indianland">commutations (Indian land)</option>
         </select>
         for
+        <select id="geography-select">
+            <option value="states">states</option>
+            <option value="land_offices">land offices</option>
+        </select>
+        for
         <span id="current-year"></span>
         <input style="width: 500px;" id="year-select" type="range" min="1863" max="1912" value="1863">
     </p>
     <div id="mapid" style="height: 800px;"></div>
 </body>
 <script>
-function getColor(d) {
-    return d > 15000 ? '#24000a' :
-        d > 10000 ? '#4d0117' :
-        d > 5000 ? '#800026' :
-        d > 2500  ? '#BD0026' :
-        d > 1000  ? '#E31A1C' :
-        d > 500  ? '#FC4E2A' :
-        d > 250   ? '#FD8D3C' :
-        d > 100   ? '#FEB24C' :
-        d > 50   ? '#FED976' :
-        '#FFEDA0';
+/**
+ * Get the hex color for a state.
+ *
+ * @param int number
+ * @return string
+ */
+function getStateColor(number) {
+    return number > 15000 ? '#24000a' :
+           number > 10000 ? '#4d0117' :
+           number > 5000  ? '#800026' :
+           number > 2500  ? '#BD0026' :
+           number > 1000  ? '#E31A1C' :
+           number > 500   ? '#FC4E2A' :
+           number > 250   ? '#FD8D3C' :
+           number > 100   ? '#FEB24C' :
+           number > 50    ? '#FED976' :
+                            '#FFEDA0';
 }
-function style(feature) {
-    return {
-        fillColor: getColor(feature.properties.total_number),
-        weight: 2,
-        opacity: 1,
-        color: 'white',
-        fillOpacity: 0.7
-    };
+/**
+ * Get the circle radius for a land office.
+ *
+ * @param int number
+ * @return int
+ */
+function getLandOfficeRadius(number) {
+    return number > 15000 ? 40 :
+           number > 10000 ? 36 :
+           number > 5000  ? 32 :
+           number > 2500  ? 28 :
+           number > 1000  ? 24 :
+           number > 500   ? 20 :
+           number > 250   ? 16 :
+           number > 100   ? 12 :
+           number > 50    ?  6 :
+                             2;
 }
-function getFeaturedCollection(type, year) {
-    return L.geoJson(featureCollections[type][year], {
-        style: style,
-        onEachFeature: function(feature, layer) {
+/**
+ * Get the GeoJSON FeatureCollection object for states of this type and year.
+ *
+ * @param string type The stat type
+ * @param string year The year
+ * @return L.geoJson
+ */
+function getFeatureCollectionStates(type, year) {
+    return L.geoJson(featureCollectionsStates[type][year], {
+        style: (feature) => {
+            return {
+                fillColor: getStateColor(feature.properties.total_number),
+                weight: 2,
+                opacity: 1,
+                color: 'white',
+                fillOpacity: 0.7
+            };
+        },
+        onEachFeature: (feature, layer) => {
             var stateData = '<table><tr><th>State</th><td style="text-align: right;">' + feature.properties.state + '</td></tr><tr><th>Total number</th><td style="text-align: right;">' + feature.properties.total_number.toLocaleString() + '</td></tr><tr><th>Total acres</th><td style="text-align: right;">' + feature.properties.total_acres.toLocaleString() + '</td></tr></table>';
             var landOfficeData = '<table><tr><th>Land office</th><th>Total number</th><th>Total acres</th></tr>'; 
             for (const [key, value] of Object.entries(feature.properties.land_offices).sort()) {
@@ -66,11 +102,31 @@ function getFeaturedCollection(type, year) {
             }
             landOfficeData += '</table>';
             layer.bindPopup(stateData + landOfficeData);
-            //~ console.log(feature.properties.land_offices);
         }
-    })
+    });
+}
+/**
+ * Get GeoJSON FeatureCollection object for land offices of this type and year.
+ *
+ * @param string type The stat type
+ * @param string year The year
+ * @return L.geoJson
+ */
+function getFeatureCollectionLandOffices(type, year) {
+    return L.geoJson(featureCollectionsLandOffices[type][year], {
+        pointToLayer: (feature, latlng) => {
+            return new L.circleMarker(latlng, {
+                radius: getLandOfficeRadius(feature.properties.number)
+            });
+        },
+        onEachFeature: (feature, layer) => {
+            var landOfficeData = '<table><tr><th>Land office</th><td style="text-align: right;">' + feature.properties.land_office + '</td></tr><tr><th>Number</th><td style="text-align: right;">' + feature.properties.number.toLocaleString() + '</td></tr><tr><th>Acres</th><td style="text-align: right;">' + feature.properties.acres.toLocaleString() + '</td></tr></table>';
+            layer.bindPopup(landOfficeData);
+        }
+    });
 }
 
+// Set up the map.
 var map = L.map('mapid').setView([37.8, -96], 5);
 var accessToken = 'pk.eyJ1Ijoiamltc2FmbGV5IiwiYSI6ImNrMjI3dWluMzFvODUzZ3A0d2ZranZ3Y3gifQ.tT-154d2ba__LzjJNLE1cA';
 L.tileLayer(
@@ -81,24 +137,48 @@ L.tileLayer(
     }
 ).addTo(map);
 
+// Get the controls.
+var geographySelect = document.getElementById('geography-select');
 var typeSelect = document.getElementById('type-select');
 var yearSelect = document.getElementById('year-select');
 var currentYear = document.getElementById('current-year');
 
-var featuredCollection = getFeaturedCollection('claim', '1863');
-map.addLayer(featuredCollection);
+// Render the default map.
+var featureCollection = getFeatureCollectionStates('claim', '1863');
+map.addLayer(featureCollection);
 currentYear.innerHTML = '1863';
 
-typeSelect.addEventListener('change', (event) => {
-    map.removeLayer(featuredCollection);
-    featuredCollection = getFeaturedCollection(event.target.value, yearSelect.value);
-    map.addLayer(featuredCollection);
+// Handle a change of the geography select.
+geographySelect.addEventListener('change', (event) => {
+    map.removeLayer(featureCollection);
+    if ('land_offices' == event.target.value) {
+        featureCollection = getFeatureCollectionLandOffices(typeSelect.value, yearSelect.value);
+    } else {
+        featureCollection = getFeatureCollectionStates(typeSelect.value, yearSelect.value);
+    }
+    map.addLayer(featureCollection);
 });
 
+// Handle a change of the stat type select.
+typeSelect.addEventListener('change', (event) => {
+    map.removeLayer(featureCollection);
+    if ('land_offices' == geographySelect.value) {
+        featureCollection = getFeatureCollectionLandOffices(event.target.value, yearSelect.value);
+    } else {
+        featureCollection = getFeatureCollectionStates(event.target.value, yearSelect.value);
+    }
+    map.addLayer(featureCollection);
+});
+
+// Handle a change of the year range input.
 yearSelect.addEventListener('input', (event) => {
-    map.removeLayer(featuredCollection);
-    featuredCollection = getFeaturedCollection(typeSelect.value, event.target.value);
-    map.addLayer(featuredCollection);
+    map.removeLayer(featureCollection);
+    if ('land_offices' == geographySelect.value) {
+        featureCollection = getFeatureCollectionLandOffices(typeSelect.value, event.target.value);
+    } else {
+        featureCollection = getFeatureCollectionStates(typeSelect.value, event.target.value);
+    }
+    map.addLayer(featureCollection);
     currentYear.innerHTML = event.target.value;
 });
 </script>

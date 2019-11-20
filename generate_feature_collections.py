@@ -8,7 +8,7 @@ conn = sqlite3.connect('mapping_the_homestead_act.db')
 conn.row_factory = sqlite3.Row
 c = conn.cursor()
 
-def getFeatureCollection(type, year):
+def getFeatureCollectionStates(type, year):
     sql = '''
     SELECT stats.year, stats.number, stats.acres, land_offices.land_office, states.state, states.coordinates
     FROM stats 
@@ -64,14 +64,51 @@ def getFeatureCollection(type, year):
     }
     return featureCollection
 
-featureCollections = {}
+def getFeatureCollectionLandOffices(type, year):
+    sql = '''
+    SELECT stats.year, stats.number, stats.acres, land_offices.land_office, land_offices.coordinates
+    FROM stats
+    INNER JOIN land_offices ON land_offices.id = stats.land_office_id
+    WHERE stats.type = ?
+    AND stats.year = ?
+    '''
+
+    features = []
+    for row in c.execute(sql, (type, year)):
+        features.append({
+            'type': 'Feature',
+            'id': row['land_office'],
+            'properties': {
+                'land_office': row['land_office'],
+                'number': row['number'],
+                'acres': row['acres'],
+            },
+            'geometry': {
+                'type': 'Point',
+                'coordinates': json.loads(row['coordinates'])
+            }
+        });
+
+    featureCollection = {
+        'type': 'FeatureCollection',
+        'features': features
+    }
+    return featureCollection
+
+featureCollectionsStates = {}
+featureCollectionsLandOffices = {}
 for type in [
     'claim', 'patent', 'commutation_sec2301', 'commutation_june151880',
     'claim_indianland', 'patent_indianland', 'commutation_indianland'
 ]:
-    if type not in featureCollections:
-        featureCollections[type] = {}
+    if type not in featureCollectionsStates:
+        featureCollectionsStates[type] = {}
+    if type not in featureCollectionsLandOffices:
+        featureCollectionsLandOffices[type] = {}
     for year in range(YEAR_FROM, YEAR_TO):
-        featureCollections[type][year] = getFeatureCollection(type, year)
-with open('html/feature-collections.js', 'w') as outfile:
-    outfile.write('var featureCollections = {}'.format(json.dumps(featureCollections)))
+        featureCollectionsStates[type][year] = getFeatureCollectionStates(type, year)
+        featureCollectionsLandOffices[type][year] = getFeatureCollectionLandOffices(type, year)
+with open('html/feature-collections-states.js', 'w') as outfile:
+    outfile.write('var featureCollectionsStates = {}'.format(json.dumps(featureCollectionsStates)))
+with open('html/feature-collections-land-offices.js', 'w') as outfile:
+    outfile.write('var featureCollectionsLandOffices = {}'.format(json.dumps(featureCollectionsLandOffices)))

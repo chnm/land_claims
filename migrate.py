@@ -24,6 +24,7 @@ CREATE TABLE land_offices (
     id INTEGER PRIMARY KEY,
     state_id INTEGER,
     land_office TEXT NOT NULL UNIQUE,
+    coordinates TEXT,
     FOREIGN KEY (state_id) REFERENCES state (id) ON DELETE CASCADE
 );
 ''')
@@ -57,18 +58,21 @@ valid_sheets = [str(year) for year in range(YEAR_FROM, YEAR_TO)]
 # Process the states and land offices. Here we assume that the list of land
 # offices and states on the "good keys" sheet is comprehensive.
 land_office_state_map = {}
+land_office_point_coordinates_map = {}
 state_values = set()
 land_office_values = set()
-for row in wb['good keys'].iter_rows(min_row=3, max_row=238, max_col=2):
+for row in wb['good keys'].iter_rows(min_row=3, max_row=238, max_col=4):
     state = row[1].value
     land_office = row[0].value
     land_office_state_map[land_office] = state
+    # Use GeoJSON point coordinates format: [longitude, latitude]
+    land_office_point_coordinates_map[land_office] = '[{}, {}]'.format(row[3].value, row[2].value)
     state_values.add((state, state_coordinates_map[state]))
 conn.executemany('INSERT INTO states (state, coordinates) VALUES (?, ?)', state_values)
 states = {row['state']: row['id'] for row in conn.execute('SELECT * FROM states').fetchall()}
 for land_office, state in land_office_state_map.items():
-    land_office_values.add((states[state], land_office))
-conn.executemany('INSERT INTO land_offices (state_id, land_office) VALUES (?, ?)', land_office_values)
+    land_office_values.add((states[state], land_office, land_office_point_coordinates_map[land_office]))
+conn.executemany('INSERT INTO land_offices (state_id, land_office, coordinates) VALUES (?, ?, ?)', land_office_values)
 land_offices = {row['land_office']: row['id'] for row in conn.execute('SELECT * FROM land_offices').fetchall()}
 
 # Process the claims, patents, and commutations.
