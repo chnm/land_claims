@@ -33,7 +33,8 @@ conn.execute('''
 CREATE TABLE IF NOT EXISTS stats (
     id INTEGER PRIMARY KEY,
     land_office_id INTEGER,
-    year INTEGER NOT NULL,
+    date_start TEXT NOT NULL,
+    date_end TEXT NOT NULL,
     type TEXT NOT NULL,
     number INTEGER NULL,
     acres REAL NULL,
@@ -53,7 +54,7 @@ for feature in data['features']:
 
 # Load the workbook.
 wb = openpyxl.load_workbook(sys.argv[1])
-valid_sheets = [str(year) for year in range(YEAR_FROM, YEAR_TO)]
+valid_sheets = [str(year) for year in range(YEAR_FROM, YEAR_TO + 1)]
 
 # Process the states and land offices. Here we assume that the list of land
 # offices and states on the "good keys" sheet is comprehensive.
@@ -90,33 +91,36 @@ for ws in wb:
             if row[0].value is not None:
                 if row[0].value in land_offices:
                     land_office_id = land_offices[row[0].value]
+                    # Adjust for fiscal year, except for 1863 (the year the law was enacted)
                     year = int(ws.title)
+                    date_start = '1863-01-01' if (1863 == year) else '{}-07-01'.format(year - 1)
+                    date_end = '{}-06-30'.format(year)
                     # Note that the numbers must be integers (i.e. not None or float)
                     if isinstance(row[1].value, int):
-                        claim_values.add((land_office_id, year, 'claim', row[1].value, row[2].value))
+                        claim_values.add((land_office_id, date_start, date_end, 'claim', row[1].value, row[2].value))
                     if isinstance(row[3].value, int):
-                        patent_values.add((land_office_id, year, 'patent', row[3].value, row[4].value))
+                        patent_values.add((land_office_id, date_start, date_end, 'patent', row[3].value, row[4].value))
                     if isinstance(row[5].value, int):
-                        commutation_sec2301_values.add((land_office_id, year, 'commutation_sec2301', row[5].value, row[6].value))
+                        commutation_sec2301_values.add((land_office_id, date_start, date_end, 'commutation_sec2301', row[5].value, row[6].value))
                     if isinstance(row[7].value, int):
-                        commutation_june151880_values.add((land_office_id, year, 'commutation_june151880', row[7].value, row[8].value))
+                        commutation_june151880_values.add((land_office_id, date_start, date_end, 'commutation_june151880', row[7].value, row[8].value))
                     if isinstance(row[9].value, (int, float)):
-                        commutation_sec2301fees_values.add((land_office_id, year, 'commutation_sec2301fees', row[9].value))
+                        commutation_sec2301fees_values.add((land_office_id, date_start, date_end, 'commutation_sec2301fees', row[9].value))
                     if isinstance(row[11].value, int):
-                        claim_indianland_values.add((land_office_id, year, 'claim_indianland', row[11].value, row[12].value))
+                        claim_indianland_values.add((land_office_id, date_start, date_end, 'claim_indianland', row[11].value, row[12].value))
                     if isinstance(row[13].value, int):
-                        commutation_indianland_values.add((land_office_id, year, 'commutation_indianland', row[13].value, row[14].value))
+                        commutation_indianland_values.add((land_office_id, date_start, date_end, 'commutation_indianland', row[13].value, row[14].value))
                     if isinstance(row[15].value, int):
-                        patent_indianland_values.add((land_office_id, year, 'patent_indianland', row[15].value, row[16].value))
+                        patent_indianland_values.add((land_office_id, date_start, date_end, 'patent_indianland', row[15].value, row[16].value))
 
-conn.executemany('INSERT INTO stats (land_office_id, year, type, number, acres) VALUES (?, ?, ?, ?, ?)', claim_values)
-conn.executemany('INSERT INTO stats (land_office_id, year, type, number, acres) VALUES (?, ?, ?, ?, ?)', patent_values)
-conn.executemany('INSERT INTO stats (land_office_id, year, type, number, acres) VALUES (?, ?, ?, ?, ?)', commutation_sec2301_values)
-conn.executemany('INSERT INTO stats (land_office_id, year, type, number, acres) VALUES (?, ?, ?, ?, ?)', commutation_june151880_values)
-conn.executemany('INSERT INTO stats (land_office_id, year, type, fees) VALUES (?, ?, ?, ?)', commutation_sec2301fees_values)
-conn.executemany('INSERT INTO stats (land_office_id, year, type, number, acres) VALUES (?, ?, ?, ?, ?)', claim_indianland_values)
-conn.executemany('INSERT INTO stats (land_office_id, year, type, number, acres) VALUES (?, ?, ?, ?, ?)', commutation_indianland_values)
-conn.executemany('INSERT INTO stats (land_office_id, year, type, number, acres) VALUES (?, ?, ?, ?, ?)', patent_indianland_values)
+conn.executemany('INSERT INTO stats (land_office_id, date_start, date_end, type, number, acres) VALUES (?, ?, ?, ?, ?, ?)', claim_values)
+conn.executemany('INSERT INTO stats (land_office_id, date_start, date_end, type, number, acres) VALUES (?, ?, ?, ?, ?, ?)', patent_values)
+conn.executemany('INSERT INTO stats (land_office_id, date_start, date_end, type, number, acres) VALUES (?, ?, ?, ?, ?, ?)', commutation_sec2301_values)
+conn.executemany('INSERT INTO stats (land_office_id, date_start, date_end, type, number, acres) VALUES (?, ?, ?, ?, ?, ?)', commutation_june151880_values)
+conn.executemany('INSERT INTO stats (land_office_id, date_start, date_end, type, fees) VALUES (?, ?, ?, ?, ?)', commutation_sec2301fees_values)
+conn.executemany('INSERT INTO stats (land_office_id, date_start, date_end, type, number, acres) VALUES (?, ?, ?, ?, ?, ?)', claim_indianland_values)
+conn.executemany('INSERT INTO stats (land_office_id, date_start, date_end, type, number, acres) VALUES (?, ?, ?, ?, ?, ?)', commutation_indianland_values)
+conn.executemany('INSERT INTO stats (land_office_id, date_start, date_end, type, number, acres) VALUES (?, ?, ?, ?, ?, ?)', patent_indianland_values)
 
 conn.commit()
 conn.close()

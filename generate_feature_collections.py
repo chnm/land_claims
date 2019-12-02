@@ -8,18 +8,18 @@ conn = sqlite3.connect('mapping_the_homestead_act.db')
 conn.row_factory = sqlite3.Row
 c = conn.cursor()
 
-def getFeatureCollectionStates(type, year):
+def getFeatureCollectionStates(type, date_start):
     sql = '''
-    SELECT stats.year, stats.number, stats.acres, land_offices.land_office, states.state, states.coordinates
+    SELECT stats.date_start, stats.number, stats.acres, land_offices.land_office, states.state, states.coordinates
     FROM stats 
     INNER JOIN land_offices ON land_offices.id = stats.land_office_id
     INNER JOIN states ON states.id = land_offices.state_id
     WHERE stats.type = ?
-    AND stats.year = ?
+    AND stats.date_start = ?
     '''
 
     states = {}
-    for row in c.execute(sql, (type, year)):
+    for row in c.execute(sql, (type, date_start)):
         if row['state'] not in states:
             states[row['state']] = {
                 'coordinates': json.loads(row['coordinates']),
@@ -64,17 +64,17 @@ def getFeatureCollectionStates(type, year):
     }
     return featureCollection
 
-def getFeatureCollectionLandOffices(type, year):
+def getFeatureCollectionLandOffices(type, date_start):
     sql = '''
-    SELECT stats.year, stats.number, stats.acres, land_offices.land_office, land_offices.coordinates
+    SELECT stats.date_start, stats.number, stats.acres, land_offices.land_office, land_offices.coordinates
     FROM stats
     INNER JOIN land_offices ON land_offices.id = stats.land_office_id
     WHERE stats.type = ?
-    AND stats.year = ?
+    AND stats.date_start = ?
     '''
 
     features = []
-    for row in c.execute(sql, (type, year)):
+    for row in c.execute(sql, (type, date_start)):
         features.append({
             'type': 'Feature',
             'id': row['land_office'],
@@ -105,9 +105,10 @@ for type in [
         featureCollectionsStates[type] = {}
     if type not in featureCollectionsLandOffices:
         featureCollectionsLandOffices[type] = {}
-    for year in range(YEAR_FROM, YEAR_TO):
-        featureCollectionsStates[type][year] = getFeatureCollectionStates(type, year)
-        featureCollectionsLandOffices[type][year] = getFeatureCollectionLandOffices(type, year)
+    for year in range(YEAR_FROM, YEAR_TO + 1):
+        date_start = '1863-01-01' if (1863 == year) else '{}-07-01'.format(year - 1)
+        featureCollectionsStates[type][date_start] = getFeatureCollectionStates(type, date_start)
+        featureCollectionsLandOffices[type][date_start] = getFeatureCollectionLandOffices(type, date_start)
 with open('html/feature-collections-states.js', 'w') as outfile:
     outfile.write('var featureCollectionsStates = {}'.format(json.dumps(featureCollectionsStates)))
 with open('html/feature-collections-land-offices.js', 'w') as outfile:

@@ -38,9 +38,59 @@
             <option value="states">states</option>
             <option value="land_offices">land offices</option>
         </select>
-        for
-        <span id="current-year"></span>
-        <input style="width: 500px;" id="year-select" type="range" min="1863" max="1912" value="1863">
+        for fiscal year
+        <select id="date-select">
+            <option value="1863-01-01">1863 (second half)</option>
+            <option value="1863-07-01">1864</option>
+            <option value="1864-07-01">1865</option>
+            <option value="1865-07-01">1866</option>
+            <option value="1866-07-01">1867</option>
+            <option value="1867-07-01">1868</option>
+            <option value="1868-07-01">1869</option>
+            <option value="1869-07-01">1870</option>
+            <option value="1870-07-01">1871</option>
+            <option value="1871-07-01">1872</option>
+            <option value="1872-07-01">1873</option>
+            <option value="1873-07-01">1874</option>
+            <option value="1874-07-01">1875</option>
+            <option value="1875-07-01">1876</option>
+            <option value="1876-07-01">1877</option>
+            <option value="1877-07-01">1878</option>
+            <option value="1878-07-01">1879</option>
+            <option value="1879-07-01">1880</option>
+            <option value="1880-07-01">1881</option>
+            <option value="1881-07-01">1882</option>
+            <option value="1882-07-01">1883</option>
+            <option value="1883-07-01">1884</option>
+            <option value="1884-07-01">1885</option>
+            <option value="1885-07-01">1886</option>
+            <option value="1886-07-01">1887</option>
+            <option value="1887-07-01">1888</option>
+            <option value="1888-07-01">1889</option>
+            <option value="1889-07-01">1890</option>
+            <option value="1890-07-01">1891</option>
+            <option value="1891-07-01">1892</option>
+            <option value="1892-07-01">1893</option>
+            <option value="1893-07-01">1894</option>
+            <option value="1894-07-01">1895</option>
+            <option value="1895-07-01">1896</option>
+            <option value="1896-07-01">1897</option>
+            <option value="1897-07-01">1898</option>
+            <option value="1898-07-01">1899</option>
+            <option value="1899-07-01">1900</option>
+            <option value="1900-07-01">1901</option>
+            <option value="1901-07-01">1902</option>
+            <option value="1902-07-01">1903</option>
+            <option value="1903-07-01">1904</option>
+            <option value="1904-07-01">1905</option>
+            <option value="1905-07-01">1906</option>
+            <option value="1906-07-01">1907</option>
+            <option value="1907-07-01">1908</option>
+            <option value="1908-07-01">1909</option>
+            <option value="1909-07-01">1910</option>
+            <option value="1910-07-01">1911</option>
+            <option value="1911-07-01">1912</option>
+        </select>
     </p>
     <div id="mapid" style="height: 800px;"></div>
 </body>
@@ -162,6 +212,7 @@ function getFeatureCollection(statType, year, totalType, geographyType) {
             });
     }
 }
+
 // Set up the map.
 const map = new L.map('mapid').setView([37.8, -96], 5);
 const accessToken = 'pk.eyJ1Ijoiamltc2FmbGV5IiwiYSI6ImNrMjI3dWluMzFvODUzZ3A0d2ZranZ3Y3gifQ.tT-154d2ba__LzjJNLE1cA';
@@ -172,23 +223,23 @@ new L.tileLayer(
         id: 'mapbox.light',
     }
 ).addTo(map);
+
 // Get the controls.
 const totalSelect = document.getElementById('total-select');
 const geographySelect = document.getElementById('geography-select');
 const statSelect = document.getElementById('stat-select');
-const yearSelect = document.getElementById('year-select');
-const currentYear = document.getElementById('current-year');
+const dateSelect = document.getElementById('date-select');
+
 // Render the default map.
-let featureCollection = getFeatureCollection('claim', '1863', 'number', 'states');
+let featureCollection = getFeatureCollection('claim', '1863-01-01', 'number', 'states');
 map.addLayer(featureCollection);
-currentYear.innerHTML = '1863';
 
 // Handle a change of the total select.
 totalSelect.addEventListener('change', (event) => {
     map.removeLayer(featureCollection);
     featureCollection = getFeatureCollection(
         statSelect.value,
-        yearSelect.value,
+        dateSelect.value,
         event.target.value,
         geographySelect.value
     );
@@ -199,7 +250,7 @@ geographySelect.addEventListener('change', (event) => {
     map.removeLayer(featureCollection);
     featureCollection = getFeatureCollection(
         statSelect.value,
-        yearSelect.value,
+        dateSelect.value,
         totalSelect.value,
         event.target.value
     );
@@ -210,14 +261,14 @@ statSelect.addEventListener('change', (event) => {
     map.removeLayer(featureCollection);
     featureCollection = getFeatureCollection(
         event.target.value,
-        yearSelect.value,
+        dateSelect.value,
         totalSelect.value,
         geographySelect.value
     );
     map.addLayer(featureCollection);
 });
-// Handle a change of the year range input.
-yearSelect.addEventListener('input', (event) => {
+// Handle a change of the date select.
+dateSelect.addEventListener('change', (event) => {
     map.removeLayer(featureCollection);
     featureCollection = getFeatureCollection(
         statSelect.value,
@@ -226,7 +277,6 @@ yearSelect.addEventListener('input', (event) => {
         geographySelect.value
     );
     map.addLayer(featureCollection);
-    currentYear.innerHTML = event.target.value;
 });
 </script>
 </html>
