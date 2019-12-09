@@ -189,18 +189,49 @@ function getLandOfficeRadius(number, totalType) {
     }
 }
 /**
- * Get the GeoJSON FeatureCollection object for this stat and year.
+ * Add the historical states/territories GeoJSON FeatureCollection.
+ *
+ * @param string date The date (YYYY-MM-DD)
+ */
+function addHistStateTerr(date) {
+    fetch('http://hecker.mesa.gmu.edu:8090/ahcb/states/' + date + '/')
+        .then(data => {return data.json()})
+        .then(response => {
+            if (undefined !== histStateTerr) {
+                map.removeLayer(histStateTerr);
+            }
+            histStateTerr = L.geoJSON(response, {
+                style: (feature) => {
+                    return {
+                        weight: 1,
+                        opacity: 0.8,
+                        fillOpacity: 0.1,
+                        color: 'green',
+                    };
+                }
+            }).addTo(map);
+        });
+}
+/**
+ * Add the GeoJSON FeatureCollection object for the provided configuration.
  *
  * @param string statType The stat type
- * @param string year The year
+ * @param string date The date (YYYY-MM-DD)
  * @param string totalType The total type, "number" or "acres"
  * @param string geographyType The geography type, "states" or "land_offices"
- * @return L.geoJson
  */
-function getFeatureCollection(statType, year, totalType, geographyType) {
+function addFeatureCollection(statType, date, totalType, geographyType) {
+    // First remove all existing GeoJSON layers.
+    if (undefined !== featureCollection) {
+        map.removeLayer(featureCollection);
+    }
+    if (undefined !== histStateTerr) {
+        map.removeLayer(histStateTerr);
+    }
     switch (geographyType) {
         case 'land_offices':
-            return L.geoJson(featureCollectionsLandOffices[statType][year], {
+            addHistStateTerr(date);
+            featureCollection = L.geoJson(featureCollectionsLandOffices[statType][date], {
                 pointToLayer: (feature, latlng) => {
                     let number;
                     if ('average_size' == totalType) {
@@ -219,9 +250,10 @@ function getFeatureCollection(statType, year, totalType, geographyType) {
                     layer.bindPopup(landOfficeData);
                 }
             });
+            break;
         case 'states':
         default:
-            return L.geoJson(featureCollectionsStates[statType][year], {
+            featureCollection = L.geoJson(featureCollectionsStates[statType][date], {
                 style: (feature) => {
                     let number;
                     if ('average_size' == totalType) {
@@ -250,11 +282,12 @@ function getFeatureCollection(statType, year, totalType, geographyType) {
                 }
             });
     }
+    map.addLayer(featureCollection);
 }
 
 // Set up the map.
+const accessToken = '';
 const map = new L.map('mapid').setView([37.8, -96], 5);
-const accessToken = 'pk.eyJ1Ijoiamltc2FmbGV5IiwiYSI6ImNrMjI3dWluMzFvODUzZ3A0d2ZranZ3Y3gifQ.tT-154d2ba__LzjJNLE1cA';
 new L.tileLayer(
     'https://api.tiles.mapbox.com/v4/{id}/{z}/{x}/{y}.png?access_token=' + accessToken,
     {
@@ -270,52 +303,25 @@ const statSelect = document.getElementById('stat-select');
 const dateSelect = document.getElementById('date-select');
 
 // Render the default map.
-let featureCollection = getFeatureCollection('claim', '1863-01-01', 'number', 'states');
-map.addLayer(featureCollection);
+let histStateTerr;
+let featureCollection;
+addFeatureCollection('claim', '1863-01-01', 'number', 'states');
 
 // Handle a change of the total select.
 totalSelect.addEventListener('change', (event) => {
-    map.removeLayer(featureCollection);
-    featureCollection = getFeatureCollection(
-        statSelect.value,
-        dateSelect.value,
-        event.target.value,
-        geographySelect.value
-    );
-    map.addLayer(featureCollection);
+    addFeatureCollection(statSelect.value, dateSelect.value, event.target.value, geographySelect.value);
 });
 // Handle a change of the geography select.
 geographySelect.addEventListener('change', (event) => {
-    map.removeLayer(featureCollection);
-    featureCollection = getFeatureCollection(
-        statSelect.value,
-        dateSelect.value,
-        totalSelect.value,
-        event.target.value
-    );
-    map.addLayer(featureCollection);
+    addFeatureCollection(statSelect.value, dateSelect.value, totalSelect.value, event.target.value);
 });
 // Handle a change of the stat select.
 statSelect.addEventListener('change', (event) => {
-    map.removeLayer(featureCollection);
-    featureCollection = getFeatureCollection(
-        event.target.value,
-        dateSelect.value,
-        totalSelect.value,
-        geographySelect.value
-    );
-    map.addLayer(featureCollection);
+    addFeatureCollection(event.target.value, dateSelect.value, totalSelect.value, geographySelect.value);
 });
 // Handle a change of the date select.
 dateSelect.addEventListener('change', (event) => {
-    map.removeLayer(featureCollection);
-    featureCollection = getFeatureCollection(
-        statSelect.value,
-        event.target.value,
-        totalSelect.value,
-        geographySelect.value
-    );
-    map.addLayer(featureCollection);
+    addFeatureCollection(statSelect.value, event.target.value, totalSelect.value, geographySelect.value);
 });
 </script>
 </html>
