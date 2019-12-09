@@ -18,10 +18,11 @@
 <body>
     <h1>Mapping the Homestead Act</h1>
     <p>
-        Map total
+        Map
         <select id="total-select">
             <option value="number">number</option>
             <option value="acres">acres</option>
+            <option value="average_size">average size</option>
         </select>
         of
         <select id="stat-select">
@@ -103,6 +104,18 @@
  */
 function getStateColor(number, totalType) {
     switch (totalType) {
+        case 'average_size':
+            return number > 170 ? '#24000a' :
+                   number > 160 ? '#4d0117' :
+                   number > 155 ? '#800026' :
+                   number > 150 ? '#BD0026' :
+                   number > 140 ? '#E31A1C' :
+                   number > 130 ? '#FC4E2A' :
+                   number > 120 ? '#FD8D3C' :
+                   number > 100 ? '#FEB24C' :
+                   number >  50 ? '#FED976' :
+                                  '#FFEDA0';
+            break;
         case 'acres':
             return number > 300000 ? '#24000a' :
                    number > 200000 ? '#4d0117' :
@@ -137,6 +150,18 @@ function getStateColor(number, totalType) {
  */
 function getLandOfficeRadius(number, totalType) {
     switch (totalType) {
+        case 'average_size':
+            return number > 170 ? 40 :
+                   number > 160 ? 36 :
+                   number > 155 ? 32 :
+                   number > 150 ? 28 :
+                   number > 140 ? 24 :
+                   number > 130 ? 20 :
+                   number > 120 ? 16 :
+                   number > 100 ? 12 :
+                   number >  50 ?  6 :
+                                   2;
+            break;
         case 'acres':
             return number > 300000 ? 40 :
                    number > 200000 ? 36 :
@@ -177,13 +202,20 @@ function getFeatureCollection(statType, year, totalType, geographyType) {
         case 'land_offices':
             return L.geoJson(featureCollectionsLandOffices[statType][year], {
                 pointToLayer: (feature, latlng) => {
-                    const number = ('acres' == totalType) ? feature.properties.acres : feature.properties.number;
+                    let number;
+                    if ('average_size' == totalType) {
+                        number = feature.properties.average_size;
+                    } else if ('acres' == totalType) {
+                        number = feature.properties.acres;
+                    } else {
+                        number = feature.properties.number;
+                    }
                     return new L.circleMarker(latlng, {
                         radius: getLandOfficeRadius(number, totalType)
                     });
                 },
                 onEachFeature: (feature, layer) => {
-                    let landOfficeData = '<table><tr><th>Land office</th><td style="text-align: right;">' + feature.properties.land_office + '</td></tr><tr><th>Number</th><td style="text-align: right;">' + feature.properties.number.toLocaleString() + '</td></tr><tr><th>Acres</th><td style="text-align: right;">' + feature.properties.acres.toLocaleString() + '</td></tr></table>';
+                    let landOfficeData = '<table><tr><th>Land office</th><td style="text-align: right;">' + feature.properties.land_office + '</td></tr><tr><th>Number</th><td style="text-align: right;">' + feature.properties.number.toLocaleString() + '</td></tr><tr><th>Acres</th><td style="text-align: right;">' + feature.properties.acres.toLocaleString() + '</td></tr><tr><th>Average size</th><td style="text-align: right;">' + feature.properties.average_size.toLocaleString() + '</td></tr></table>';
                     layer.bindPopup(landOfficeData);
                 }
             });
@@ -191,7 +223,14 @@ function getFeatureCollection(statType, year, totalType, geographyType) {
         default:
             return L.geoJson(featureCollectionsStates[statType][year], {
                 style: (feature) => {
-                    const number = ('acres' == totalType) ? feature.properties.total_acres : feature.properties.total_number;
+                    let number;
+                    if ('average_size' == totalType) {
+                        number = feature.properties.total_average_size;
+                    } else if ('acres' == totalType) {
+                        number = feature.properties.total_acres;
+                    } else {
+                        number = feature.properties.total_number;
+                    }
                     return {
                         fillColor: getStateColor(number, totalType),
                         weight: 2,
@@ -201,7 +240,7 @@ function getFeatureCollection(statType, year, totalType, geographyType) {
                     };
                 },
                 onEachFeature: (feature, layer) => {
-                    let stateData = '<table><tr><th>State</th><td style="text-align: right;">' + feature.properties.state + '</td></tr><tr><th>Total number</th><td style="text-align: right;">' + feature.properties.total_number.toLocaleString() + '</td></tr><tr><th>Total acres</th><td style="text-align: right;">' + feature.properties.total_acres.toLocaleString() + '</td></tr></table>';
+                    let stateData = '<table><tr><th>State</th><td style="text-align: right;">' + feature.properties.state + '</td></tr><tr><th>Total number</th><td style="text-align: right;">' + feature.properties.total_number.toLocaleString() + '</td></tr><tr><th>Total acres</th><td style="text-align: right;">' + feature.properties.total_acres.toLocaleString() + '</td></tr><tr><th>Average size</th><td style="text-align: right;">' + feature.properties.total_average_size.toLocaleString() + '</td></tr></table>';
                     let landOfficeData = '<table><tr><th>Land office</th><th>Total number</th><th>Total acres</th></tr>';
                     for (const [key, value] of Object.entries(feature.properties.land_offices).sort()) {
                         landOfficeData += '<tr><td>' + key + '</td><td style="text-align: right;">' +  value['total_number'].toLocaleString() + '</td><td style="text-align: right;">' +  value['total_acres'].toLocaleString() + '</td></tr>';

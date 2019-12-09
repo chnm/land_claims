@@ -50,6 +50,7 @@ def getFeatureCollectionStates(type, date_start):
                 'state': state,
                 'total_acres': data['total_acres'],
                 'total_number': data['total_number'],
+                'total_average_size': data['total_acres'] / data['total_number'],
                 'land_offices': data['land_offices']
             },
             'geometry': {
@@ -75,13 +76,16 @@ def getFeatureCollectionLandOffices(type, date_start):
 
     features = []
     for row in c.execute(sql, (type, date_start)):
+        number = int(row['number'])
+        acres = float(row['acres']) if isinstance(row['acres'], (int, float)) else 0
         features.append({
             'type': 'Feature',
             'id': row['land_office'],
             'properties': {
                 'land_office': row['land_office'],
-                'number': row['number'],
-                'acres': row['acres'],
+                'number': number,
+                'acres': acres,
+                'average_size': acres / number,
             },
             'geometry': {
                 'type': 'Point',
