@@ -44,4 +44,8 @@ $ python3 generate_feature_collections.py
 ```
 
 After this you can copy the `/html` directory to your web server and view a
-simple dynamic map.
+simple dynamic map. To get the most out of the map, you'll need to edit
+`index.html` and provide the following:
+
+- Your [Mapbox](https://www.mapbox.com/) API access token (for the tile layer)
+- The URL to the [Religious Ecologies Data API](https://github.com/religious-ecologies/relecapi) (for historical states boundaries)
