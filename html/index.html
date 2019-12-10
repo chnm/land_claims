@@ -97,10 +97,194 @@
 </body>
 <script>
 /**
+ * CONFIGURATION
+ *
+ * You must provide the following:
+ *   - Your Mapbox API access token (for the tile layer)
+ *   - The URL to the Religious Ecologies Data API (for historical states boundaries)
+ *
+ * @see https://www.mapbox.com/
+ * @see https://github.com/religious-ecologies/relecapi
+ */
+const MAPBOX_ACCESS_TOKEN = '';
+const RELECAPI_ENDPOINT = '';
+
+// Set up the map.
+const map = new L.map('mapid').setView([37.8, -96], 5);
+new L.tileLayer(
+    'https://api.tiles.mapbox.com/v4/{id}/{z}/{x}/{y}.png?access_token=' + MAPBOX_ACCESS_TOKEN,
+    {
+        maxZoom: 18,
+        id: 'mapbox.light',
+    }
+).addTo(map);
+
+// Get the controls.
+const totalSelect = document.getElementById('total-select');
+const geographySelect = document.getElementById('geography-select');
+const statSelect = document.getElementById('stat-select');
+const dateSelect = document.getElementById('date-select');
+
+// Render the default map.
+let histStateTerr;
+let featureCollection;
+addFeatureCollection('claim', '1863-01-01', 'number', 'states');
+
+// Handle a change of the total select.
+totalSelect.addEventListener('change', (event) => {
+    addFeatureCollection(statSelect.value, dateSelect.value, event.target.value, geographySelect.value);
+});
+// Handle a change of the geography select.
+geographySelect.addEventListener('change', (event) => {
+    addFeatureCollection(statSelect.value, dateSelect.value, totalSelect.value, event.target.value);
+});
+// Handle a change of the stat select.
+statSelect.addEventListener('change', (event) => {
+    addFeatureCollection(event.target.value, dateSelect.value, totalSelect.value, geographySelect.value);
+});
+// Handle a change of the date select.
+dateSelect.addEventListener('change', (event) => {
+    addFeatureCollection(statSelect.value, event.target.value, totalSelect.value, geographySelect.value);
+});
+
+/**
+ * Add the GeoJSON layer for the provided configuration.
+ *
+ * @param string statType The stat type
+ * @param string date The date (YYYY-MM-DD)
+ * @param string totalType The total type: "number", "acres", or "average_size"
+ * @param string geographyType The geography type: "states" or "land_offices"
+ */
+function addFeatureCollection(statType, date, totalType, geographyType) {
+    switch (geographyType) {
+        case 'land_offices':
+            addLandOffices(statType, date, totalType);
+            break;
+        case 'states':
+            addStates(statType, date, totalType)
+            break;
+        default:
+            // Invalid geographyType. Do nothing.
+    }
+}
+/**
+ * Add the "land_offices" GeoJSON layer to the map.
+ *
+ * Uses an API endpoint to fetch historical states/territories from the
+ * "Religious Ecologies Data API."
+ *
+ * @see https://github.com/religious-ecologies/relecapi
+ * @param string statType The stat type
+ * @param string date The date (YYYY-MM-DD)
+ * @param string totalType The total type: "number", "acres", or "average_size"
+ */
+function addLandOffices(statType, date, totalType) {
+    fetch(RELECAPI_ENDPOINT + '/states/' + date + '/')
+        .then(data => {return data.json()})
+        .then(response => {
+            removeAllLayers();
+            // Add the historical states/territories layer. Adding first so the
+            // land offices are clickable.
+            histStateTerr = L.geoJSON(response, {
+                style: (feature) => {
+                    return {
+                        weight: 1,
+                        opacity: 0.8,
+                        fillOpacity: 0.1,
+                        color: 'green',
+                    };
+                },
+                onEachFeature: (feature, layer) => {
+                    layer.bindPopup('<table><tr><th>Name</th><td>' + feature.properties.name + '</td></tr><tr><th>Type</th><td>' + feature.properties.terr_type + '</td></tr><tr><th>Sq. miles</th><td>' + feature.properties.area_sqmi.toLocaleString() + '</td></tr></table>');
+                }
+            }).addTo(map);
+        })
+        .catch(err => {
+            console.log('Error when fetching from the Religious Ecologies Data API: ' + err);
+        })
+        // Add the land offices layer in finally() just in case the Religious
+        // Ecologies Data API endpoint is unavailable.
+        .finally(() => {
+            if (undefined !== featureCollection) {
+                map.removeLayer(featureCollection);
+            }
+            // Add the land offices layer.
+            featureCollection = L.geoJson(featureCollectionsLandOffices[statType][date], {
+                pointToLayer: (feature, latlng) => {
+                    let number;
+                    if ('average_size' == totalType) {
+                        number = feature.properties.average_size;
+                    } else if ('acres' == totalType) {
+                        number = feature.properties.acres;
+                    } else {
+                        number = feature.properties.number;
+                    }
+                    return new L.circleMarker(latlng, {
+                        radius: getLandOfficeRadius(number, totalType),
+                        weight: 2,
+                    });
+                },
+                onEachFeature: (feature, layer) => {
+                    let landOfficeData = '<table><tr><th>Land office</th><td style="text-align: right;">' + feature.properties.land_office + '</td></tr><tr><th>Number</th><td style="text-align: right;">' + feature.properties.number.toLocaleString() + '</td></tr><tr><th>Acres</th><td style="text-align: right;">' + feature.properties.acres.toLocaleString() + '</td></tr><tr><th>Average size</th><td style="text-align: right;">' + feature.properties.average_size.toLocaleString() + '</td></tr></table>';
+                    layer.bindPopup(landOfficeData);
+                }
+            }).addTo(map);
+        });
+}
+/**
+ * Add the "states" GeoJSON layer to the map.
+ *
+ * @param string statType The stat type
+ * @param string date The date (YYYY-MM-DD)
+ * @param string totalType The total type: "number", "acres", or "average_size"
+ */
+function addStates(statType, date, totalType) {
+    removeAllLayers();
+    featureCollection = L.geoJson(featureCollectionsStates[statType][date], {
+        style: (feature) => {
+            let number;
+            if ('average_size' == totalType) {
+                number = feature.properties.total_average_size;
+            } else if ('acres' == totalType) {
+                number = feature.properties.total_acres;
+            } else {
+                number = feature.properties.total_number;
+            }
+            return {
+                fillColor: getStateColor(number, totalType),
+                weight: 1,
+                opacity: 1,
+                color: 'white',
+                fillOpacity: 0.5
+            };
+        },
+        onEachFeature: (feature, layer) => {
+            let stateData = '<table><tr><th>State</th><td style="text-align: right;">' + feature.properties.state + '</td></tr><tr><th>Total number</th><td style="text-align: right;">' + feature.properties.total_number.toLocaleString() + '</td></tr><tr><th>Total acres</th><td style="text-align: right;">' + feature.properties.total_acres.toLocaleString() + '</td></tr><tr><th>Average size</th><td style="text-align: right;">' + feature.properties.total_average_size.toLocaleString() + '</td></tr></table>';
+            let landOfficeData = '<table><tr><th>Land office</th><th>Total number</th><th>Total acres</th></tr>';
+            for (const [key, value] of Object.entries(feature.properties.land_offices).sort()) {
+                landOfficeData += '<tr><td>' + key + '</td><td style="text-align: right;">' +  value['total_number'].toLocaleString() + '</td><td style="text-align: right;">' +  value['total_acres'].toLocaleString() + '</td></tr>';
+            }
+            landOfficeData += '</table>';
+            layer.bindPopup(stateData + landOfficeData);
+        }
+    }).addTo(map);
+}
+/**
+ * Remove all GeoJSON layers from the map.
+ */
+function removeAllLayers() {
+    if (undefined !== featureCollection) {
+        map.removeLayer(featureCollection);
+    }
+    if (undefined !== histStateTerr) {
+        map.removeLayer(histStateTerr);
+    }
+}
+/**
  * Get the hex color for a state.
  *
  * @param int number
- * @return string
+ * @return string totalType
  */
 function getStateColor(number, totalType) {
     switch (totalType) {
@@ -188,140 +372,5 @@ function getLandOfficeRadius(number, totalType) {
                                      2;
     }
 }
-/**
- * Add the historical states/territories GeoJSON FeatureCollection.
- *
- * @param string date The date (YYYY-MM-DD)
- */
-function addHistStateTerr(date) {
-    fetch('http://hecker.mesa.gmu.edu:8090/ahcb/states/' + date + '/')
-        .then(data => {return data.json()})
-        .then(response => {
-            if (undefined !== histStateTerr) {
-                map.removeLayer(histStateTerr);
-            }
-            histStateTerr = L.geoJSON(response, {
-                style: (feature) => {
-                    return {
-                        weight: 1,
-                        opacity: 0.8,
-                        fillOpacity: 0.1,
-                        color: 'green',
-                    };
-                }
-            }).addTo(map);
-        });
-}
-/**
- * Add the GeoJSON FeatureCollection object for the provided configuration.
- *
- * @param string statType The stat type
- * @param string date The date (YYYY-MM-DD)
- * @param string totalType The total type, "number" or "acres"
- * @param string geographyType The geography type, "states" or "land_offices"
- */
-function addFeatureCollection(statType, date, totalType, geographyType) {
-    // First remove all existing GeoJSON layers.
-    if (undefined !== featureCollection) {
-        map.removeLayer(featureCollection);
-    }
-    if (undefined !== histStateTerr) {
-        map.removeLayer(histStateTerr);
-    }
-    switch (geographyType) {
-        case 'land_offices':
-            addHistStateTerr(date);
-            featureCollection = L.geoJson(featureCollectionsLandOffices[statType][date], {
-                pointToLayer: (feature, latlng) => {
-                    let number;
-                    if ('average_size' == totalType) {
-                        number = feature.properties.average_size;
-                    } else if ('acres' == totalType) {
-                        number = feature.properties.acres;
-                    } else {
-                        number = feature.properties.number;
-                    }
-                    return new L.circleMarker(latlng, {
-                        radius: getLandOfficeRadius(number, totalType)
-                    });
-                },
-                onEachFeature: (feature, layer) => {
-                    let landOfficeData = '<table><tr><th>Land office</th><td style="text-align: right;">' + feature.properties.land_office + '</td></tr><tr><th>Number</th><td style="text-align: right;">' + feature.properties.number.toLocaleString() + '</td></tr><tr><th>Acres</th><td style="text-align: right;">' + feature.properties.acres.toLocaleString() + '</td></tr><tr><th>Average size</th><td style="text-align: right;">' + feature.properties.average_size.toLocaleString() + '</td></tr></table>';
-                    layer.bindPopup(landOfficeData);
-                }
-            });
-            break;
-        case 'states':
-        default:
-            featureCollection = L.geoJson(featureCollectionsStates[statType][date], {
-                style: (feature) => {
-                    let number;
-                    if ('average_size' == totalType) {
-                        number = feature.properties.total_average_size;
-                    } else if ('acres' == totalType) {
-                        number = feature.properties.total_acres;
-                    } else {
-                        number = feature.properties.total_number;
-                    }
-                    return {
-                        fillColor: getStateColor(number, totalType),
-                        weight: 2,
-                        opacity: 1,
-                        color: 'white',
-                        fillOpacity: 0.7
-                    };
-                },
-                onEachFeature: (feature, layer) => {
-                    let stateData = '<table><tr><th>State</th><td style="text-align: right;">' + feature.properties.state + '</td></tr><tr><th>Total number</th><td style="text-align: right;">' + feature.properties.total_number.toLocaleString() + '</td></tr><tr><th>Total acres</th><td style="text-align: right;">' + feature.properties.total_acres.toLocaleString() + '</td></tr><tr><th>Average size</th><td style="text-align: right;">' + feature.properties.total_average_size.toLocaleString() + '</td></tr></table>';
-                    let landOfficeData = '<table><tr><th>Land office</th><th>Total number</th><th>Total acres</th></tr>';
-                    for (const [key, value] of Object.entries(feature.properties.land_offices).sort()) {
-                        landOfficeData += '<tr><td>' + key + '</td><td style="text-align: right;">' +  value['total_number'].toLocaleString() + '</td><td style="text-align: right;">' +  value['total_acres'].toLocaleString() + '</td></tr>';
-                    }
-                    landOfficeData += '</table>';
-                    layer.bindPopup(stateData + landOfficeData);
-                }
-            });
-    }
-    map.addLayer(featureCollection);
-}
-
-// Set up the map.
-const accessToken = '';
-const map = new L.map('mapid').setView([37.8, -96], 5);
-new L.tileLayer(
-    'https://api.tiles.mapbox.com/v4/{id}/{z}/{x}/{y}.png?access_token=' + accessToken,
-    {
-        maxZoom: 18,
-        id: 'mapbox.light',
-    }
-).addTo(map);
-
-// Get the controls.
-const totalSelect = document.getElementById('total-select');
-const geographySelect = document.getElementById('geography-select');
-const statSelect = document.getElementById('stat-select');
-const dateSelect = document.getElementById('date-select');
-
-// Render the default map.
-let histStateTerr;
-let featureCollection;
-addFeatureCollection('claim', '1863-01-01', 'number', 'states');
-
-// Handle a change of the total select.
-totalSelect.addEventListener('change', (event) => {
-    addFeatureCollection(statSelect.value, dateSelect.value, event.target.value, geographySelect.value);
-});
-// Handle a change of the geography select.
-geographySelect.addEventListener('change', (event) => {
-    addFeatureCollection(statSelect.value, dateSelect.value, totalSelect.value, event.target.value);
-});
-// Handle a change of the stat select.
-statSelect.addEventListener('change', (event) => {
-    addFeatureCollection(event.target.value, dateSelect.value, totalSelect.value, geographySelect.value);
-});
-// Handle a change of the date select.
-dateSelect.addEventListener('change', (event) => {
-    addFeatureCollection(statSelect.value, event.target.value, totalSelect.value, geographySelect.value);
-});
 </script>
 </html>
