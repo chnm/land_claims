@@ -14,6 +14,7 @@
         crossorigin=""></script>
     <script src="feature-collections-states.js"></script>
     <script src="feature-collections-land-offices.js"></script>
+    <script src="feature-collections-tribal-ceded-lands.js"></script>
 </head>
 <body>
     <h1>Mapping the Homestead Act</h1>
@@ -127,6 +128,7 @@ const dateSelect = document.getElementById('date-select');
 
 // Render the default map.
 let histStateTerr;
+let tribalCededLands;
 let featureCollection;
 addFeatureCollection('claim', '1863-01-01', 'number', 'states');
 
@@ -206,6 +208,9 @@ async function addLandOffices(statType, date, totalType) {
         if (undefined !== featureCollection) {
             map.removeLayer(featureCollection);
         }
+        if (undefined !== tribalCededLands) {
+            map.removeLayer(tribalCededLands);
+        }
         featureCollection = L.geoJson(featureCollectionsLandOffices[statType][date], {
             pointToLayer: (feature, latlng) => {
                 let number;
@@ -226,6 +231,21 @@ async function addLandOffices(statType, date, totalType) {
                 layer.bindPopup(landOfficeData);
             }
         }).addTo(map);
+        tribalCededLands = L.geoJson(featureCollectionsTribalCededLands[date], {
+            style: (feature) => {
+                return {
+                    fillColor: 'green',
+                    weight: 1,
+                    opacity: 1,
+                    color: 'white',
+                    fillOpacity: 0.5
+                };
+            },
+            onEachFeature: (feature, layer) => {
+                let cessionData = '<table><tr><th>Cession tribes</th><td style="text-align: left;">' + feature.properties.cession_tribes + '</td></tr><tr><th>Present-day tribes</th><td style="text-align: left;">' + feature.properties.present_tribes + '</td></tr></table>';
+                layer.bindPopup(cessionData);
+            }
+        }).addTo(map)
     }
 }
 /**
@@ -275,6 +295,9 @@ function removeAllLayers() {
     }
     if (undefined !== histStateTerr) {
         map.removeLayer(histStateTerr);
+    }
+    if (undefined !== tribalCededLands) {
+        map.removeLayer(tribalCededLands);
     }
 }
 /**
